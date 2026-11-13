@@ -1,13 +1,14 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Enum to track the type of data stored
+// Enum to identify the data type
 typedef enum {
     INT, FLOAT, CHAR, STRING
 } DataType;
 
-// Union to store different types of data
+// Union to store different data types
 typedef union {
     int int_value;
     float float_value;
@@ -15,103 +16,175 @@ typedef union {
     char *string_value;
 } Data;
 
-// Struct to encapsulate the data and its type
+// Structure combining union and type information
 typedef struct {
     Data data;
     DataType type;
+    int initialized;
 } Container;
 
 // Function declarations
-void set_int(Container *c, int value);
-void set_float(Container *c, float value);
-void set_char(Container *c, char value);
-void set_string(Container *c, const char *value);
-int get_int(Container *c);
-float get_float(Container *c);
-char get_char(Container *c);
-char* get_string(Container *c);
+void init_container(Container *c);
+int set_int(Container *c, int value);
+int set_float(Container *c, float value);
+int set_char(Container *c, char value);
+int set_string(Container *c, const char *value);
+
+int get_int(const Container *c, int *result);
+int get_float(const Container *c, float *result);
+int get_char(const Container *c, char *result);
+int get_string(const Container *c, const char **result);
+
 void free_container(Container *c);
 
+// Initialize container
+void init_container(Container *c) {
+    if (c != NULL) {
+        c->initialized = 0;
+        c->type = INT;
+        c->data.int_value = 0;
+    }
+}
+
+// Free previously allocated memory
+void free_container(Container *c) {
+    if (c == NULL)
+        return;
+
+    if (c->initialized && c->type == STRING) {
+        free(c->data.string_value);
+    }
+
+    c->initialized = 0;
+}
+
+// Set integer value
+int set_int(Container *c, int value) {
+    if (c == NULL)
+        return 0;
+
+    free_container(c);
+
+    c->data.int_value = value;
+    c->type = INT;
+    c->initialized = 1;
+
+    return 1;
+}
+
+// Set float value
+int set_float(Container *c, float value) {
+    if (c == NULL)
+        return 0;
+
+    free_container(c);
+
+    c->data.float_value = value;
+    c->type = FLOAT;
+    c->initialized = 1;
+
+    return 1;
+}
+
+// Set character value
+int set_char(Container *c, char value) {
+    if (c == NULL)
+        return 0;
+
+    free_container(c);
+
+    c->data.char_value = value;
+    c->type = CHAR;
+    c->initialized = 1;
+
+    return 1;
+}
+
+// Set string value
+int set_string(Container *c, const char *value) {
+    if (c == NULL || value == NULL)
+        return 0;
+
+    char *temp = malloc(strlen(value) + 1);
+
+    if (temp == NULL)
+        return 0;
+
+    strcpy(temp, value);
+
+    free_container(c);
+
+    c->data.string_value = temp;
+    c->type = STRING;
+    c->initialized = 1;
+
+    return 1;
+}
+
+// Get integer value
+int get_int(const Container *c, int *result) {
+    if (c == NULL || result == NULL ||
+        !c->initialized || c->type != INT)
+        return 0;
+
+    *result = c->data.int_value;
+    return 1;
+}
+
+// Get float value
+int get_float(const Container *c, float *result) {
+    if (c == NULL || result == NULL ||
+        !c->initialized || c->type != FLOAT)
+        return 0;
+
+    *result = c->data.float_value;
+    return 1;
+}
+
+// Get character value
+int get_char(const Container *c, char *result) {
+    if (c == NULL || result == NULL ||
+        !c->initialized || c->type != CHAR)
+        return 0;
+
+    *result = c->data.char_value;
+    return 1;
+}
+
+// Get string value
+int get_string(const Container *c, const char **result) {
+    if (c == NULL || result == NULL ||
+        !c->initialized || c->type != STRING)
+        return 0;
+
+    *result = c->data.string_value;
+    return 1;
+}
+
+// Main function
 int main() {
     Container c;
+    int i;
+    float f;
+    char ch;
+    const char *str;
 
-    set_int(&c, 10);
-    printf("Int: %d\n", get_int(&c));
+    init_container(&c);
 
-    set_float(&c, 3.14);
-    printf("Float: %f\n", get_float(&c));
+    if (set_int(&c, 10) && get_int(&c, &i))
+        printf("Int: %d\n", i);
 
-    set_char(&c, 'A');
-    printf("Char: %c\n", get_char(&c));
+    if (set_float(&c, 3.14f) && get_float(&c, &f))
+        printf("Float: %f\n", f);
 
-    set_string(&c, "Hello, World!");
-    printf("String: %s\n", get_string(&c));
+    if (set_char(&c, 'A') && get_char(&c, &ch))
+        printf("Char: %c\n", ch);
 
-    // Free any allocated memory
+    if (set_string(&c, "Hello, World!") &&
+        get_string(&c, &str))
+        printf("String: %s\n", str);
+
     free_container(&c);
 
     return 0;
-}
-
-// Function definitions
-void set_int(Container *c, int value) {
-    c->data.int_value = value;
-    c->type = INT;
-}
-
-void set_float(Container *c, float value) {
-    c->data.float_value = value;
-    c->type = FLOAT;
-}
-
-void set_char(Container *c, char value) {
-    c->data.char_value = value;
-    c->type = CHAR;
-}
-
-void set_string(Container *c, const char *value) {
-    // Free previous string if any
-    if (c->type == STRING) {
-        free(c->data.string_value);
-    }
-    c->data.string_value = strdup(value);
-    c->type = STRING;
-}
-
-int get_int(Container *c) {
-    if (c->type != INT) {
-        printf("Error: Not an int\n");
-        return 0;
-    }
-    return c->data.int_value;
-}
-
-float get_float(Container *c) {
-    if (c->type != FLOAT) {
-        printf("Error: Not a float\n");
-        return 0.0;
-    }
-    return c->data.float_value;
-}
-
-char get_char(Container *c) {
-    if (c->type != CHAR) {
-        printf("Error: Not a char\n");
-        return '\0';
-    }
-    return c->data.char_value;
-}
-
-char* get_string(Container *c) {
-    if (c->type != STRING) {
-        printf("Error: Not a string\n");
-        return NULL;
-    }
-    return c->data.string_value;
-}
-
-void free_container(Container *c) {
-    if (c->type == STRING) {
-        free(c->data.string_value);
-    }
 }
